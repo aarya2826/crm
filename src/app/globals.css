@@ -3,25 +3,233 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f6fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --muted: #64748b;
+  --primary: #4f46e5;
+  --accent: #0d9488;
+  --radius: 0.875rem;
+  --border: #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #070b16;
+  --foreground: #e2e8f0;
+  --card: #0f172a;
+  --muted: #94a3b8;
+  --primary: #818cf8;
+  --accent: #2dd4bf;
+  --border: #1e293b;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.app-canvas {
+  background:
+    radial-gradient(1200px 480px at 0% -10%, rgb(79 70 229 / 0.08), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgb(13 148 136 / 0.07), transparent 50%),
+    var(--background);
+}
+
+.dark .app-canvas {
+  background:
+    radial-gradient(1200px 480px at 0% -10%, rgb(99 102 241 / 0.16), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgb(45 212 191 / 0.08), transparent 50%),
+    var(--background);
+}
+
+.page-title {
+  @apply text-display tracking-tight text-slate-900 dark:text-slate-50;
+}
+
+.section-title {
+  @apply text-title text-slate-900 dark:text-slate-100;
+}
+
+.card-title {
+  @apply text-sm font-semibold text-slate-800 dark:text-slate-200;
+}
+
+.body-text {
+  @apply text-body text-slate-600 dark:text-slate-300;
+}
+
+.caption {
+  @apply text-caption text-slate-500 dark:text-slate-400;
+}
+
+.surface-card {
+  @apply rounded-xl border border-slate-200/90 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900;
+}
+
+.input-field {
+  @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none ring-brand-500/30 transition focus:border-brand-400 focus:ring-4 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100;
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html,
+body {
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+.page-enter {
+  animation: page-fade 240ms ease-out;
+}
+
+.modal-backdrop {
+  animation: modal-fade 180ms ease-out;
+}
+
+.modal-backdrop.is-leaving {
+  animation: modal-fade-out 160ms ease-in forwards;
+}
+
+.modal-panel {
+  animation: modal-scale 180ms ease-out;
+}
+
+.modal-panel.is-leaving {
+  animation: modal-scale-out 160ms ease-in forwards;
+}
+
+.drawer-backdrop {
+  animation: modal-fade 180ms ease-out;
+}
+
+.drawer-backdrop.is-leaving {
+  animation: modal-fade-out 160ms ease-in forwards;
+}
+
+.drawer-panel {
+  animation: drawer-in 200ms ease-out;
+}
+
+.drawer-panel.is-leaving {
+  animation: drawer-out 160ms ease-in forwards;
+}
+
+.table-busy {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.table-ready {
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+@keyframes page-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes modal-scale-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes drawer-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+button,
+a,
+select,
+input,
+textarea {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease,
+    transform 120ms ease, opacity 150ms ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  .page-enter,
+  .modal-backdrop,
+  .modal-panel,
+  .drawer-backdrop,
+  .drawer-panel,
+  .table-busy,
+  .table-ready {
+    animation: none !important;
+    transition: none !important;
   }
 }

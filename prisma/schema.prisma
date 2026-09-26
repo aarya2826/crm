@@ -1,0 +1,324 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  WALK_IN
+  SOCIAL_MEDIA
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  FOLLOW_UP
+  INTERESTED
+  CONVERTED
+  LOST
+}
+
+enum StudentStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  DROPPED
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+}
+
+enum UserRole {
+  ADMIN
+  COUNSELOR
+  ACCOUNTANT
+  TEACHER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+enum TaskStatus {
+  PENDING
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  SMS
+  NOTE
+  MEETING
+}
+
+/// Enquiry / pipeline record. Counselor assignment is optional.
+model Lead {
+  id                  String        @id @default(cuid())
+  name                String
+  phone               String
+  email               String?
+  source              LeadSource
+  courseInterested    String
+  status              LeadStatus    @default(NEW)
+  notes               String?
+  nextFollowUpDate    DateTime?
+  assignedCounselorId String?
+  assignedCounselor   User?         @relation("LeadCounselor", fields: [assignedCounselorId], references: [id], onDelete: SetNull)
+  score               Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  students            Student[]
+  tasks               Task[]
+  activities          ActivityLog[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([score])
+  @@index([assignedCounselorId])
+  @@index([phone])
+}
+
+/// Catalog course. Students and batches Restrict so a course cannot vanish while enrollments exist.
+model Course {
+  id            String         @id @default(cuid())
+  name          String
+  duration      String
+  totalFee      Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+  batches       Batch[]
+  students      Student[]
+  feeStructures FeeStructure[]
+}
+
+/// Scheduled class group belonging to one course.
+model Batch {
+  id         String       @id @default(cuid())
+  name       String
+  courseId   String
+  course     Course       @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  startDate  DateTime
+  timing     String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @default(now()) @updatedAt
+  students   Student[]
+  attendance Attendance[]
+
+  @@index([courseId])
+}
+
+/// Enrolled learner. Payments Restrict (financial records). Attendance/docs/activity Cascade.
+model Student {
+  id             String            @id @default(cuid())
+  name           String
+  phone          String
+  email          String?
+  courseId       String
+  course         Course            @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  batchId        String
+  batch          Batch             @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  enrollmentDate DateTime
+  status         StudentStatus     @default(ACTIVE)
+  leadId         String?
+  lead           Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  payments       Payment[]
+  attendance     Attendance[]
+  tasks          Task[]
+  activities     ActivityLog[]
+  documents      StudentDocument[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([courseId])
+  @@index([batchId])
+  @@index([leadId])
+  @@index([phone])
+}
+
+/// Installment plan for a course. Cascades when the course is removed (not a ledger).
+model FeeStructure {
+  id                   String   @id @default(cuid())
+  courseId             String
+  course               Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  totalAmount          Int
+  numberOfInstallments Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+
+  @@index([courseId])
+}
+
+/// Collected fee. Restrict student delete so money history cannot disappear.
+model Payment {
+  id                String      @id @default(cuid())
+  studentId         String
+  student           Student     @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  amount            Int
+  paymentDate       DateTime
+  mode              PaymentMode
+  installmentNumber Int
+  notes             String?
+  createdAt         DateTime    @default(now())
+  invoice           Invoice?
+
+  @@index([studentId])
+  @@index([paymentDate])
+  @@index([createdAt])
+}
+
+/// Singleton institute profile (id = "main") used on receipts and the header.
+model InstituteSetting {
+  id                String   @id @default("main")
+  instituteName     String   @default("Your Institute")
+  address           String   @default("")
+  phone             String   @default("")
+  email             String   @default("")
+  logoDataUrl       String   @default("")
+  nextInvoiceNumber Int      @default(1)
+  updatedAt         DateTime @updatedAt
+}
+
+/// Staff login. Password is a bcrypt hash. Assigned leads SetNull if the user is removed.
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          UserRole
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
+  attendance    Attendance[]
+  assignedLeads Lead[]         @relation("LeadCounselor")
+  tasks         Task[]
+  activities    ActivityLog[]
+  notifications Notification[]
+
+  @@index([role])
+}
+
+/// Daily batch register. One row per student per calendar day.
+model Attendance {
+  id             String           @id @default(cuid())
+  studentId      String
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batchId        String
+  batch          Batch            @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  date           DateTime
+  status         AttendanceStatus
+  markedByUserId String
+  markedBy       User             @relation(fields: [markedByUserId], references: [id], onDelete: Restrict)
+  createdAt      DateTime         @default(now())
+
+  @@unique([studentId, date])
+  @@index([batchId, date])
+  @@index([studentId])
+}
+
+/// Follow-up assigned to a staff user; may optionally point at a lead or student.
+model Task {
+  id               String       @id @default(cuid())
+  title            String
+  relatedLeadId    String?
+  relatedLead      Lead?        @relation(fields: [relatedLeadId], references: [id], onDelete: SetNull)
+  relatedStudentId String?
+  relatedStudent   Student?     @relation(fields: [relatedStudentId], references: [id], onDelete: SetNull)
+  assignedToUserId String
+  assignedTo       User         @relation(fields: [assignedToUserId], references: [id], onDelete: Restrict)
+  dueDate          DateTime
+  status           TaskStatus   @default(PENDING)
+  priority         TaskPriority @default(MEDIUM)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @default(now()) @updatedAt
+
+  @@index([assignedToUserId, status])
+  @@index([dueDate])
+  @@index([relatedLeadId])
+  @@index([relatedStudentId])
+}
+
+/// Timeline note on a lead or student. Cascades with the parent record.
+model ActivityLog {
+  id              String       @id @default(cuid())
+  leadId          String?
+  lead            Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  studentId       String?
+  student         Student?     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type            ActivityType
+  description     String
+  createdByUserId String
+  createdBy       User         @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdAt       DateTime     @default(now())
+
+  @@index([leadId])
+  @@index([studentId])
+  @@index([createdAt])
+}
+
+/// In-app bell items for a staff user.
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  href      String
+  dedupeKey String    @unique
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// One invoice per payment; deleted with the payment (payments themselves are Restrict).
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNumber Int       @unique
+  paymentId     String    @unique
+  payment       Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  taxAmount     Int       @default(0)
+  nextDueDate   DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+/// Reusable SMS/email body used by the messaging stub.
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+/// Uploaded file metadata; disk files live under public/uploads.
+model StudentDocument {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fileName   String
+  fileUrl    String
+  fileType   String
+  uploadedAt DateTime @default(now())
+
+  @@index([studentId])
+}
