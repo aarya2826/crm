@@ -6,7 +6,7 @@ Web CRM for training institutes: leads, enrollments, fees, attendance, tasks, an
 
 - **Next.js 14** (App Router) + **React 18**
 - **TypeScript**
-- **Prisma 6** + **SQLite** (local file; swap provider later for a shared DB)
+- **Prisma 6** + **PostgreSQL**
 - **Tailwind CSS**
 - **NextAuth v4** (credentials, JWT)
 - **React Hook Form** + **Zod**
@@ -84,7 +84,11 @@ macOS/Linux:
 cp .env.example .env
 ```
 
-Set `NEXTAUTH_SECRET` to a long random string. Keep `DATABASE_URL` as `file:./dev.db` for local SQLite.
+Set `NEXTAUTH_SECRET` to a long random string. Set `DATABASE_URL` to your Postgres database, for example:
+
+`postgresql://postgres:YOUR_PASSWORD@localhost:5432/crm`
+
+Create the empty database first (`CREATE DATABASE crm;`). Then:
 
 ```bash
 npx prisma migrate deploy
@@ -96,7 +100,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 `prisma migrate dev` is fine in development if you are iterating on the schema.
 
-**SQLite is local only.** Do not commit `prisma/dev.db`. For a shared or production database, change `provider` in `prisma/schema.prisma`, set `DATABASE_URL`, and run migrations against that server.
+Do not commit `.env`. Older SQLite files (`prisma/dev.db`) are unused after this switch. Historical SQLite migrations are kept under `prisma/migrations_sqlite/` for reference only — Prisma applies `prisma/migrations/` (Postgres).
 
 ## Demo logins
 
@@ -144,7 +148,7 @@ Change these after first login in a real deployment.
 - Receipts and invoices are generated **in the browser** (jsPDF), not stored as files.
 - Lead score is a heuristic, not a trained model.
 - Revenue forecast uses invoice `nextDueDate` and remaining course fee (approximate).
-- SQLite is not suitable for multi-server production without a move to Postgres (or similar).
+- You need a running **PostgreSQL** server; GitHub does not host the live database.
 
 ## License
 
