@@ -104,7 +104,10 @@ export async function getStudentsPage(input: {
     where.batchId = input.batchId;
   }
   if (search) {
-    where.OR = [{ name: { contains: search } }, { phone: { contains: search } }];
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search, mode: "insensitive" } },
+    ];
   }
   const orderBy: Prisma.StudentOrderByWithRelationInput =
     sort === "name"

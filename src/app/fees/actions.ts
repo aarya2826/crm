@@ -88,7 +88,7 @@ export async function getStudentFeePage(input: {
     where.courseId = input.courseId;
   }
   if (search) {
-    where.name = { contains: search };
+    where.name = { contains: search, mode: "insensitive" };
   }
 
   try {
